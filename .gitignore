@@ -1,0 +1,15 @@
+# Build output
+build/
+DerivedData/
+*.dSYM/
+*.zip
+
+# Xcode per-user state
+xcuserdata/
+*.xcuserstate
+
+# macOS
+.DS_Store
+
+# Local planning notes (not part of the public project)
+SPEC.md
