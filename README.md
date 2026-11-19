@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <a href="../../releases/latest"><img alt="Download" src="https://img.shields.io/badge/Download-v0.5-1FB0E6?style=for-the-badge"></a>
+  <a href="../../releases/latest"><img alt="Download" src="https://img.shields.io/badge/Download-v0.5.1-1FB0E6?style=for-the-badge"></a>
   <img alt="macOS 27 or later" src="https://img.shields.io/badge/macOS-27%2B-8B4FC9?style=for-the-badge&logo=apple&logoColor=white">
   <img alt="Swift" src="https://img.shields.io/badge/Swift-SwiftUI-1FB0E6?style=for-the-badge&logo=swift&logoColor=white">
   <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/License-MIT-8B4FC9?style=for-the-badge"></a>
@@ -38,7 +38,7 @@ It's light on your Mac: everything is event-driven, so it uses almost no CPU whi
 
 ## Download
 
-1. Download **TwoToned-Projects-0.5.zip** from the [latest release](../../releases/latest).
+1. Download the latest **TwoToned-Projects** zip from the [latest release](../../releases/latest).
 2. Double-click the zip, then drag **TwoToned Projects** into your **Applications** folder.
 3. Open it. The first time, macOS will say it can't verify the app (see below), so click **Done**.
 4. Open **System Settings › Privacy & Security**, scroll down to the message about TwoToned Projects, and click **Open Anyway**. Confirm with your password or Touch ID.

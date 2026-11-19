@@ -10,7 +10,7 @@ import Foundation
 import Darwin
 
 let serverName = "twotoned-projects"
-let serverVersion = "0.5.0"
+let serverVersion = "0.5.1"
 let appBundleID = "com.twotonedstudios.projects"
 
 let socketPath = FileManager.default.homeDirectoryForCurrentUser
