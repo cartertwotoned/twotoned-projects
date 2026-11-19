@@ -49,10 +49,16 @@ struct BrainstormView: View {
                         Color.clear
                             .frame(maxWidth: .infinity, minHeight: 80)
                             .contentShape(Rectangle())
+                            .onTapGesture { focus = nil }
                             .onDrop(of: [IdeaDrag.type], delegate: IdeaDropDelegate(
                                 target: nil, dragging: $dragging, reorder: reorder))
                     }
                     .padding(.horizontal, 16)
+                    .background {
+                        Color.clear
+                            .contentShape(Rectangle())
+                            .onTapGesture { focus = nil }
+                    }
                 }
             }
         }
@@ -65,10 +71,18 @@ struct BrainstormView: View {
             // If a drag was cancelled outside the window, the next click clears its dimmed state.
             clickMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { event in
                 dragging = nil
+                // A click anywhere that isn't a text field ends editing, which also clears a blank
+                // detail. (macOS doesn't do this on its own for clicks on empty space.)
+                if !Self.isTextInput(at: event) {
+                    DispatchQueue.main.async { focus = nil }
+                }
                 return event
             }
         }
         .onDisappear {
+            for idea in ideas {
+                idea.points.removeAll { $0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+            }
             if let clickMonitor { NSEvent.removeMonitor(clickMonitor) }
             clickMonitor = nil
             dragging = nil
@@ -115,6 +129,16 @@ struct BrainstormView: View {
         let idea = BrainstormIdea(text: text, sortIndex: (ideas.map(\.sortIndex).min() ?? 1) - 1)
         context.insert(idea)
         newIdea = ""
+    }
+
+    private static func isTextInput(at event: NSEvent) -> Bool {
+        guard let window = event.window, let content = window.contentView else { return false }
+        var view = content.hitTest(content.convert(event.locationInWindow, from: nil))
+        while let current = view {
+            if current is NSText || current is NSTextField { return true }
+            view = current.superview
+        }
+        return false
     }
 
     /// Moves the dragged idea to where `target` is (or to the end when `target` is nil).
@@ -206,14 +230,16 @@ private struct IdeaCard: View {
                 .accessibilityLabel("Idea actions")
             }
 
-            ForEach($idea.points) { $point in
+            ForEach(idea.points) { point in
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text("◦").foregroundStyle(.secondary)
-                    WrappingTextField(title: "Detail", text: $point.text, lines: 1...6) { submitPoint(point) }
+                    // Bound by ID, not list position: a field that is still finishing its edit
+                    // after its detail was removed must not write into another position (that crashed).
+                    WrappingTextField(title: "Detail", text: pointText(point.id), lines: 1...6) { submitPoint(point.id) }
                         .textFieldStyle(.plain)
                         .focused(focus, equals: point.id)
                     Button {
-                        idea.points.removeAll { $0.id == point.id }
+                        removePoint(point.id)
                     } label: {
                         Image(systemName: "minus.circle")
                     }
@@ -243,15 +269,51 @@ private struct IdeaCard: View {
         .padding(12)
         .background(Color.secondary.opacity(0.06), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
         .opacity(isDragging ? 0.5 : 1)
+        // A detail left blank disappears as soon as you click or tab away from it.
+        .onChange(of: focus.wrappedValue) { old, new in
+            guard let old, old != new else { return }
+            removeIfEmpty(old)
+        }
+        // Clean up blank details left over from before this fix.
+        .onAppear {
+            idea.points.removeAll { isBlank($0) && $0.id != focus.wrappedValue }
+        }
+    }
+
+    private func isBlank(_ point: BrainstormPoint) -> Bool {
+        point.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private func removeIfEmpty(_ id: UUID) {
+        guard let point = idea.points.first(where: { $0.id == id }), isBlank(point) else { return }
+        removePoint(id)
+    }
+
+    /// Removes a detail after the current event finishes, so its text field can end editing first.
+    private func removePoint(_ id: UUID) {
+        DispatchQueue.main.async {
+            withAnimation(.snappy) { idea.points.removeAll { $0.id == id } }
+        }
+    }
+
+    /// A binding to one detail's text that looks the detail up by ID every time.
+    private func pointText(_ id: UUID) -> Binding<String> {
+        Binding(
+            get: { idea.points.first(where: { $0.id == id })?.text ?? "" },
+            set: { newValue in
+                guard let index = idea.points.firstIndex(where: { $0.id == id }) else { return }
+                idea.points[index].text = newValue
+            })
     }
 
     /// Return on a filled sub-bullet starts a new one below; Return on an empty one removes it.
-    private func submitPoint(_ point: BrainstormPoint) {
-        if point.text.trimmingCharacters(in: .whitespaces).isEmpty {
-            idea.points.removeAll { $0.id == point.id }
+    private func submitPoint(_ id: UUID) {
+        guard let point = idea.points.first(where: { $0.id == id }) else { return }
+        if isBlank(point) {
             focus.wrappedValue = nil
+            removePoint(id)
         } else {
-            addPoint(after: point.id)
+            addPoint(after: id)
         }
     }
 
